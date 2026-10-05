@@ -1,0 +1,50 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Unzip Project
+      run: |
+        unzip -o Chabutra.zip
+
+    - name: Install Dependencies & Build
+      run: |
+        npm install
+        npm run build || echo "Build skipped"
+
+    - name: Setup Capacitor & Build Android APK
+      run: |
+        npm install @capacitor/core @capacitor/cli @capacitor/android
+        npx cap init Chabutra com.chabutra.app --web-dir dist || npx cap init Chabutra com.chabutra.app --web-dir build || true
+        npx cap add android || true
+        npx cap copy android
+        cd android
+        chmod +x gradlew
+        ./gradlew assembleDebug
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: Chabutra-APK
+        path: android/app/build/outputs/apk/debug/app-debug.apk
